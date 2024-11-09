@@ -13,7 +13,7 @@ app = Flask(__name__)
 cors = CORS(app)
 
 collection = MongoClient(
-    "mongodb+srv://admin:admin@cluster0.gcthzkt.mongodb.net/?retryWrites=true&w=majority"
+    "mongodb+srv://deepanshutyagigdsc:12345cluster0.jyu9s.mongodb.net/?retryWrites=true&w=majority"
 )["openmed"]["contextmap"]
 
 
