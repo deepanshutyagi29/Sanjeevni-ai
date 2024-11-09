@@ -6,13 +6,13 @@ import express from "express";
 import { promises as fs } from "fs";
 import { getAudioBuffer } from 'simple-tts-mp3';
 import translate from '@iamtraction/google-translate';
-import OpenAI from "openai";
+import Gemini from "gemini-api"; // Placeholder for Gemini import
 dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-const openai = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY
+const gemini = new Gemini({
+  apiKey: process.env.GEMINI_API_KEY // Replace with actual Gemini key setup
 });
 
 const readJsonTranscriptStatic = {
@@ -103,67 +103,22 @@ const lipSyncMessage = async (message) => {
 app.post("/chat", async (req, res) => {
   const { lang, question } = req.body;
 
-  console.log(req.body);
-
-  // if no required body provided
   if (!question || !lang) {
     return res.send({
       message: `${question} or ${lang} is not provided properly`
-    })
+    });
   }
-  // if (!userMessage) {
-  //   res.send({
-  //     messages: [
-  //       {
-  //         text: "Hey dear... How was your day?",
-  //         audio: await audioFileToBase64("audios/intro_0.wav"),
-  //         lipsync: await readJsonTranscript("audios/intro_0.json"),
-  //         facialExpression: "smile",
-  //         animation: "Talking_1",
-  //       },
-  //       {
-  //         text: "I missed you so much... Please don't go for so long!",
-  //         audio: await audioFileToBase64("audios/intro_1.wav"),
-  //         lipsync: await readJsonTranscript("audios/intro_1.json"),
-  //         facialExpression: "sad",
-  //         animation: "Crying",
-  //       },
-  //     ],
-  //   });
-  //   return;
-  // }
-  // if (!elevenLabsApiKey || openai.apiKey === "-") {
-  //   res.send({
-  //     messages: [
-  //       {
-  //         text: "Please my dear, don't forget to add your API keys!",
-  //         audio: await audioFileToBase64("audios/api_0.wav"),
-  //         lipsync: await readJsonTranscript("audios/api_0.json"),
-  //         facialExpression: "angry",
-  //         animation: "Angry",
-  //       },
-  //       {
-  //         text: "You don't want to ruin Wawa Sensei with a crazy ChatGPT and ElevenLabs bill, right?",
-  //         audio: await audioFileToBase64("audios/api_1.wav"),
-  //         lipsync: await readJsonTranscript("audios/api_1.json"),
-  //         facialExpression: "smile",
-  //         animation: "Laughing",
-  //       },
-  //     ],
-  //   });
-  //   return;
-  // }
 
   const langToEng = await translate(question, { to: 'en', raw: false });
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+  const completion = await gemini.chat.completions.create({
+    model: "gemini-latest", // Placeholder for the model name
     messages: [
       {
         role: "system",
         content: `
-        "You're a health assitant and you're confident about it"
-        "Answer the health related query in simple language within 1-2 sentences."
+        "You're a health assistant and you're confident about it."
+        "Answer the health-related query in simple language within 1-2 sentences."
         `,
       },
       {
@@ -172,14 +127,14 @@ app.post("/chat", async (req, res) => {
       },
     ],
   });
-  let GPT3Answer = completion.choices[0].message.content
+  let geminiAnswer = completion.choices[0].message.content;
 
-  // eng to input lang translation
-  const engToLang = await translate(GPT3Answer, { from: 'en', to: lang });
+  // Translate the answer back to the input language
+  const engToLang = await translate(geminiAnswer, { from: 'en', to: lang });
 
   console.log("engToLang", engToLang);
 
-  // generate audio buffer
+  // Generate audio buffer
   const audioBuffer = await getAudioBuffer(engToLang.text, lang);
 
   const messages = [{
@@ -188,23 +143,11 @@ app.post("/chat", async (req, res) => {
     lipsync: readJsonTranscriptStatic,
     facialExpression: "smile",
     animation: "Talking",
-  }]
+  }];
+
   res.status(200).send({
     messages
-  })
-  // for (let i = 0; i < messages.length; i++) {
-  //   const message = messages[i];
-  //   // generate audio file
-  //   const fileName = `audios/message_${i}.mp3`; // The name of your audio file
-  //   const textInput = message.text; // The text you wish to convert to speech
-  //   await voice.textToSpeech(elevenLabsApiKey, voiceID, fileName, textInput);
-  //   // generate lipsync
-  //   await lipSyncMessage(i);
-  //   message.audio = await audioFileToBase64(fileName);
-  //   message.lipsync = await readJsonTranscript(`audios/message_${i}.json`);
-  // }
-
-  // res.send({ messages });
+  });
 });
 
 const readJsonTranscript = async (file) => {
